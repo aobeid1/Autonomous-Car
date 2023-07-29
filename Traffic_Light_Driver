@@ -1,0 +1,199 @@
+#include <Arduino_JSON.h>
+#include <time.h>
+#include "Firebase_Arduino_WiFiNINA.h"
+#include <stdio.h>
+#define SSID "********"
+#define WIFI_PASSWORD "*********"
+  
+#define FIREBASE_HOST "seniordesignproj-cef3d-default-rtdb.firebaseio.com"
+#define FIREBASE_AUTH "76o1qRJhT5mxuUsDVJGGB1yQvA1llL7HTEKU0Z5m"
+FirebaseData firebaseData;
+String path = "/Traffic-Pi";
+int LED_STATE = 1;
+int firebaseValue = 0;
+int oldfirebaseValue = 0;
+int GREEN = 2;
+int YELLOW = 3;
+int RED = 4;
+int GREEN2 = 5;
+int YELLOW2 = 6;
+int RED2 = 7;
+int current_state = 0;
+int Ycnt = 1000;
+int Rcnt = 500;
+char str_north[6] = "north"; 
+char str_east[5] = "east";
+char str_south[6] = "south"; 
+char str_west[5] = "west";
+char emergency[9] = "emergency"
+void setup() {
+
+
+
+
+  pinMode(GREEN, OUTPUT); // set pin 2 as output 
+  pinMode(YELLOW, OUTPUT); // set pin 3 as output
+  pinMode(RED, OUTPUT); // set pin 4 as output
+  pinMode(GREEN2, OUTPUT); // set pin 5 as output
+  pinMode(YELLOW2, OUTPUT); // set pin 6 as output
+  pinMode(RED2, OUTPUT); // set pin 7 as output
+
+  Serial.begin(115200);
+
+  // Connect to Wi-Fi
+  WiFi.begin(SSID, WIFI_PASSWORD);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.print("Connected thru IP: ");
+  Serial.println(WiFi.localIP());
+  Serial.println();
+  
+  // Connect to Firebase
+  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH, SSID, WIFI_PASSWORD);
+  Firebase.reconnectWiFi(true);
+  Firebase.beginStream(firebaseData, "/Lights/Pattern");
+
+}
+
+
+void loop() {
+  while (Firebase.readStream(firebaseData)) {
+    if (firebaseData.streamTimeout()) {
+      Serial.println("Stream timeout, resume streaming...");
+      Firebase.beginStream(firebaseData, "/Lights/Pattern");
+    }
+    if (firebaseData.dataType() == "string") {
+      String traffic_pattern = firebaseData.stringData();
+      Serial.println("Traffic Light: " + traffic_pattern);
+      // Your switch statement code here
+    
+
+
+    switch (traffic_pattern) {
+      case "Normal":
+        
+        currMillis = millis();
+        if (currMillis - prevMillis > 10000) {
+          prevMillis = currMillis;
+          if (LED_Status == 0){
+            LED_Status = 1;
+            
+            digitalWrite(GREEN, LOW);
+            digitalWrite(YELLOW, HIGH);
+            delay(Ycnt); //switch to yellow lights
+            digitalWrite(YELLOW, LOW);
+            digitalWrite(RED, HIGH);
+            delay(Rcnt); //time where both lights are red
+              
+            digitalWrite(GREEN2, HIGH);
+            digitalWrite(RED2, LOW);   
+            Firebase.setString(firebaseData, path + "/6", str_east);
+          }
+          else{
+            LED_Status = 0;
+            
+            digitalWrite(GREEN2, LOW);
+            digitalWrite(YELLOW2, HIGH);
+            delay(Ycnt); //switch to yellow lights
+            
+            digitalWrite(YELLOW2, LOW);
+            digitalWrite(RED2, HIGH);
+            delay(Rcnt); //time where both lights are red
+            
+            digitalWrite(GREEN, HIGH);
+            digitalWrite(RED, LOW);
+            Firebase.setString(firebaseData, path + "/6", str_north);
+            
+          }
+        }
+      
+        break;
+      case "Fast":
+          
+        currMillis = millis();
+        if (currMillis - prevMillis > 5000) {
+          prevMillis = currMillis;
+          if (LED_Status == 0){
+            LED_Status = 1;
+            
+            digitalWrite(GREEN, LOW);
+            digitalWrite(YELLOW, HIGH);
+            delay(Ycnt); //switch to yellow lights
+            digitalWrite(YELLOW, LOW);
+            digitalWrite(RED, HIGH);
+            delay(Rcnt); //time where both lights are red
+              
+            digitalWrite(GREEN2, HIGH);
+            digitalWrite(RED2, LOW);   
+            Firebase.setString(firebaseData, path + "/6", str_east);
+          }
+          else{
+            LED_Status = 0;
+            
+            digitalWrite(GREEN2, LOW);
+            digitalWrite(YELLOW2, HIGH);
+            delay(Ycnt); //switch to yellow lights
+            
+            digitalWrite(YELLOW2, LOW);
+            digitalWrite(RED2, HIGH);
+            delay(Rcnt); //time where both lights are red
+            
+            digitalWrite(GREEN, HIGH);
+            digitalWrite(RED, LOW);
+            Firebase.setString(firebaseData, path + "/6", str_north);
+            
+          }
+        }
+      
+        break;
+      case "Emergency":
+          
+        currMillis = millis();
+        if (currMillis - prevMillis > 2000) {
+          prevMillis = currMillis;
+          if (LED_Status == 0){
+            LED_Status = 1;
+            digitalWrite(GREEN2, LOW);
+            digitalWrite(GREEN, LOW);
+            digitalWrite(YELLOW, HIGH);
+            digitalWrite(RED2, HIGH);
+            delay(Ycnt/2); //switch to yellow lights
+            digitalWrite(YELLOW, LOW);
+            digitalWrite(RED, HIGH);
+
+            Firebase.setString(firebaseData, path + "/6", emergency);
+          }
+          else{
+            LED_Status = 0;
+            
+            digitalWrite(GREEN2, LOW);
+            digitalWrite(YELLOW2, HIGH);
+            delay(Ycnt/2); //switch to yellow lights
+            
+            digitalWrite(YELLOW2, LOW);
+            digitalWrite(RED2, HIGH);
+            
+            
+            digitalWrite(GREEN, HIGH);
+            digitalWrite(RED, LOW);
+            Firebase.setString(firebaseData, path + "/6", emergency);
+            
+          }
+        }
+      
+        break;
+      default:
+        digitalWrite(GREEN2, LOW);
+        digitalWrite(GREEN, LOW);
+        digitalWrite(YELLOW, HIGH);
+        digitalWrite(YELLOW2, HIGH);
+        digitalWrite(RED, LOW);
+        digitalWrite(RED2, LOW);
+        // Invalid traffic light value
+        break;
+    }
+    
+}
+
